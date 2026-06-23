@@ -1,14 +1,16 @@
 package controller;
 
 import modelo.*;
+import modelo.enums.EstadoDocumentoComercial;
 
+import java.util.ArrayList;
 import java.util.Date;
 
 public class DocumentoComercialController {
-    private SistemaGestionCompras sistema;
+    private ArrayList<DocumentoComercial> documentosComerciales;
 
     public DocumentoComercialController() {
-        this.sistema = SistemaGestionCompras.getInstancia();
+        this.documentosComerciales = new ArrayList<>();
     }
 
     public Factura crearFactura(int nroDocumento, Proveedor proveedor) {
@@ -21,19 +23,60 @@ public class DocumentoComercialController {
 
     public boolean validarYRegistrarFactura(Factura factura, OrdenCompra ordenCompra, Usuario usuario) {
         boolean esValida = factura.validarConOC(ordenCompra, usuario);
-        sistema.agregarDocumentoComercial(factura);
+        documentosComerciales.add(factura);
         return esValida;
     }
 
     public NotaDebito crearNotaDebito(int nroDocumento, Proveedor proveedor, double importeTotal) {
         NotaDebito notaDebito = new NotaDebito(proveedor, new Date(), nroDocumento, importeTotal);
-        sistema.agregarDocumentoComercial(notaDebito);
+        documentosComerciales.add(notaDebito);
         return notaDebito;
     }
 
     public NotaCredito crearNotaCredito(int nroDocumento, Proveedor proveedor, double importeTotal) {
         NotaCredito notaCredito = new NotaCredito(proveedor, new Date(), nroDocumento, importeTotal);
-        sistema.agregarDocumentoComercial(notaCredito);
+        documentosComerciales.add(notaCredito);
         return notaCredito;
+    }
+
+    public DocumentoComercial buscarDocumentoPorNumero(int nroDocumento) {
+        for (DocumentoComercial documento : documentosComerciales) {
+            if (documento.getNroDocumento() == nroDocumento) {
+                return documento;
+            }
+        }
+
+        return null;
+    }
+
+    public double calcularDeudaActualProveedor(Proveedor proveedor) {
+        double deuda = 0;
+
+        for (DocumentoComercial documento : documentosComerciales) {
+            if (documento.getProveedor().getCuit() == proveedor.getCuit()) {
+                if (documento.getEstado() != EstadoDocumentoComercial.CANCELADO) {
+                    deuda = deuda + documento.impactoEnCuentaCorriente();
+                    deuda = deuda - documento.getMontoPagado();
+                }
+            }
+        }
+
+        return deuda;
+    }
+
+    public ArrayList<DocumentoComercial> obtenerDocumentosPendientes() {
+        ArrayList<DocumentoComercial> pendientes = new ArrayList<>();
+
+        for (DocumentoComercial documento : documentosComerciales) {
+            if (documento.getEstado() != EstadoDocumentoComercial.CANCELADO) {
+                pendientes.add(documento);
+            }
+        }
+
+        return pendientes;
+    }
+
+    public ArrayList<DocumentoComercial> getDocumentosComerciales() {
+        return documentosComerciales;
     }
 }

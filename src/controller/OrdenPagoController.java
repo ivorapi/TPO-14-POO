@@ -2,13 +2,14 @@ package controller;
 
 import modelo.*;
 
+import java.util.ArrayList;
 import java.util.Date;
 
 public class OrdenPagoController {
-    private SistemaGestionCompras sistema;
+    private ArrayList<OrdenPago> ordenesPago;
 
     public OrdenPagoController() {
-        this.sistema = SistemaGestionCompras.getInstancia();
+        this.ordenesPago = new ArrayList<>();
     }
 
     public OrdenPago crearOrdenPago(int numero, Proveedor proveedor) {
@@ -31,9 +32,25 @@ public class OrdenPagoController {
         boolean emitida = ordenPago.emitir();
 
         if (emitida) {
-            sistema.agregarOrdenPago(ordenPago);
+            ordenesPago.add(ordenPago);
         }
 
         return emitida;
+    }
+
+    public ArrayList<OrdenPago> consultarPagosPorProveedor(Proveedor proveedor) {
+        ArrayList<OrdenPago> resultado = new ArrayList<>();
+
+        for (OrdenPago ordenPago : ordenesPago) {
+            if (ordenPago.getProveedor().getCuit() == proveedor.getCuit()) {
+                resultado.add(ordenPago);
+            }
+        }
+
+        return resultado;
+    }
+
+    public ArrayList<OrdenPago> getOrdenesPago() {
+        return ordenesPago;
     }
 }

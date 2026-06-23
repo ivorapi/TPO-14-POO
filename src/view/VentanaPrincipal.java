@@ -1,10 +1,6 @@
 package view;
 
-import controller.ConsultasController;
-import controller.DocumentoComercialController;
-import controller.OrdenCompraController;
-import controller.OrdenPagoController;
-
+import controller.*;
 import modelo.*;
 import modelo.enums.*;
 
@@ -15,7 +11,10 @@ import java.util.Date;
 public class VentanaPrincipal extends JFrame {
     private JTextArea areaResultado;
 
-    private SistemaGestionCompras sistema;
+    private ProveedorController proveedorController;
+    private RubroController rubroController;
+    private ItemController itemController;
+    private UsuarioController usuarioController;
 
     private OrdenCompraController ordenCompraController;
     private DocumentoComercialController documentoController;
@@ -39,12 +38,20 @@ public class VentanaPrincipal extends JFrame {
     private boolean ordenPagoGenerada;
 
     public VentanaPrincipal() {
-        sistema = SistemaGestionCompras.getInstancia();
+        proveedorController = new ProveedorController();
+        rubroController = new RubroController();
+        itemController = new ItemController();
+        usuarioController = new UsuarioController();
 
-        ordenCompraController = new OrdenCompraController();
         documentoController = new DocumentoComercialController();
+        ordenCompraController = new OrdenCompraController(documentoController);
         ordenPagoController = new OrdenPagoController();
-        consultasController = new ConsultasController();
+
+        consultasController = new ConsultasController(
+                ordenCompraController,
+                documentoController,
+                ordenPagoController
+        );
 
         datosCargados = false;
         ordenCompraCreada = false;
@@ -124,7 +131,7 @@ public class VentanaPrincipal extends JFrame {
                 100000
         );
 
-        proveedor.agregarRubro(rubro);
+        proveedorController.agregarRubroAProveedor(proveedor, rubro);
 
         proveedor2 = new Proveedor(
                 20999888,
@@ -139,7 +146,7 @@ public class VentanaPrincipal extends JFrame {
                 80000
         );
 
-        proveedor2.agregarRubro(rubro);
+        proveedorController.agregarRubroAProveedor(proveedor2, rubro);
 
         producto = new Producto(
                 1,
@@ -160,11 +167,11 @@ public class VentanaPrincipal extends JFrame {
                 RolUsuario.SUPERVISOR
         );
 
-        sistema.agregarRubro(rubro);
-        sistema.agregarProveedor(proveedor);
-        sistema.agregarProveedor(proveedor2);
-        sistema.agregarItem(producto);
-        sistema.agregarUsuario(supervisor);
+        rubroController.agregarRubro(rubro);
+        proveedorController.agregarProveedor(proveedor);
+        proveedorController.agregarProveedor(proveedor2);
+        itemController.agregarItem(producto);
+        usuarioController.agregarUsuario(supervisor);
 
         datosCargados = true;
 
@@ -275,7 +282,8 @@ public class VentanaPrincipal extends JFrame {
         areaResultado.append("Estado factura: " + factura.getEstado() + "\n");
         areaResultado.append("Importe factura: " + factura.getImporteTotal() + "\n");
         areaResultado.append("Impacto en cuenta corriente: " + factura.impactoEnCuentaCorriente() + "\n");
-        areaResultado.append("Deuda actual proveedor: " + sistema.calcularDeudaActualProveedor(proveedor) + "\n\n");
+        areaResultado.append("Deuda actual proveedor: "
+                + documentoController.calcularDeudaActualProveedor(proveedor) + "\n\n");
     }
 
     private void generarOrdenPago() {
@@ -322,7 +330,8 @@ public class VentanaPrincipal extends JFrame {
         areaResultado.append("Total neto a pagar: " + op.calcularTotalNetoAPagar() + "\n");
         areaResultado.append("Total medios de pago: " + op.calcularTotalMediosPago() + "\n");
         areaResultado.append("Estado factura luego del pago: " + factura.getEstado() + "\n");
-        areaResultado.append("Deuda actual proveedor luego del pago: " + sistema.calcularDeudaActualProveedor(proveedor) + "\n\n");
+        areaResultado.append("Deuda actual proveedor luego del pago: "
+                + documentoController.calcularDeudaActualProveedor(proveedor) + "\n\n");
     }
 
     private void mostrarConsultas() {
@@ -332,11 +341,13 @@ public class VentanaPrincipal extends JFrame {
         }
 
         areaResultado.append("===== CONSULTAS Y REPORTES SIMPLES =====\n");
-        areaResultado.append("Cantidad proveedores: " + sistema.getProveedores().size() + "\n");
-        areaResultado.append("Cantidad items: " + sistema.getItems().size() + "\n");
-        areaResultado.append("Cantidad OC: " + sistema.getOrdenesCompra().size() + "\n");
-        areaResultado.append("Cantidad documentos: " + sistema.getDocumentosComerciales().size() + "\n");
-        areaResultado.append("Cantidad OP: " + sistema.getOrdenesPago().size() + "\n");
+        areaResultado.append("Cantidad proveedores: " + proveedorController.getProveedores().size() + "\n");
+        areaResultado.append("Cantidad rubros: " + rubroController.getRubros().size() + "\n");
+        areaResultado.append("Cantidad items: " + itemController.getItems().size() + "\n");
+        areaResultado.append("Cantidad usuarios: " + usuarioController.getUsuarios().size() + "\n");
+        areaResultado.append("Cantidad OC: " + ordenCompraController.getOrdenesCompra().size() + "\n");
+        areaResultado.append("Cantidad documentos: " + documentoController.getDocumentosComerciales().size() + "\n");
+        areaResultado.append("Cantidad OP: " + ordenPagoController.getOrdenesPago().size() + "\n");
 
         areaResultado.append("Documentos pendientes: " + consultasController.consultarCantidadDocumentosPendientes() + "\n");
         areaResultado.append("Deuda actual proveedor: " + consultasController.consultarDeudaActualProveedor(proveedor) + "\n");
@@ -441,7 +452,7 @@ public class VentanaPrincipal extends JFrame {
                 1000
         );
 
-        proveedorPrueba.agregarRubro(rubroPrueba);
+        proveedorController.agregarRubroAProveedor(proveedorPrueba, rubroPrueba);
 
         Producto productoCaro = new Producto(
                 99,
@@ -455,9 +466,9 @@ public class VentanaPrincipal extends JFrame {
                 10
         );
 
-        sistema.agregarRubro(rubroPrueba);
-        sistema.agregarProveedor(proveedorPrueba);
-        sistema.agregarItem(productoCaro);
+        rubroController.agregarRubro(rubroPrueba);
+        proveedorController.agregarProveedor(proveedorPrueba);
+        itemController.agregarItem(productoCaro);
 
         OrdenCompra ocPrueba = ordenCompraController.crearOrdenCompra(
                 99,

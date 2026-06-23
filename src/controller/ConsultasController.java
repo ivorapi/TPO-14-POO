@@ -11,24 +11,32 @@ import java.util.Calendar;
 import java.util.Date;
 
 public class ConsultasController {
-    private SistemaGestionCompras sistema;
+    private OrdenCompraController ordenCompraController;
+    private DocumentoComercialController documentoController;
+    private OrdenPagoController ordenPagoController;
 
-    public ConsultasController() {
-        this.sistema = SistemaGestionCompras.getInstancia();
+    public ConsultasController(
+            OrdenCompraController ordenCompraController,
+            DocumentoComercialController documentoController,
+            OrdenPagoController ordenPagoController
+    ) {
+        this.ordenCompraController = ordenCompraController;
+        this.documentoController = documentoController;
+        this.ordenPagoController = ordenPagoController;
     }
 
     public double consultarDeudaActualProveedor(Proveedor proveedor) {
-        return sistema.calcularDeudaActualProveedor(proveedor);
+        return documentoController.calcularDeudaActualProveedor(proveedor);
     }
 
     public ArrayList<DocumentoComercial> consultarDocumentosPendientes() {
-        return sistema.obtenerDocumentosPendientes();
+        return documentoController.obtenerDocumentosPendientes();
     }
 
     public ArrayList<DocumentoComercial> consultarDocumentosPorProveedor(Proveedor proveedor) {
         ArrayList<DocumentoComercial> resultado = new ArrayList<>();
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             if (documento.getProveedor().getCuit() == proveedor.getCuit()) {
                 resultado.add(documento);
             }
@@ -38,60 +46,25 @@ public class ConsultasController {
     }
 
     public ArrayList<OrdenCompra> consultarOrdenesCompraPorProveedor(Proveedor proveedor) {
-        ArrayList<OrdenCompra> resultado = new ArrayList<>();
-
-        for (OrdenCompra ordenCompra : sistema.getOrdenesCompra()) {
-            if (ordenCompra.getProveedor().getCuit() == proveedor.getCuit()) {
-                resultado.add(ordenCompra);
-            }
-        }
-
-        return resultado;
+        return ordenCompraController.consultarOrdenesCompraPorProveedor(proveedor);
     }
 
     public ArrayList<OrdenCompra> consultarOrdenesCompraPorEstado(EstadoOrdenCompra estado) {
-        ArrayList<OrdenCompra> resultado = new ArrayList<>();
-
-        for (OrdenCompra ordenCompra : sistema.getOrdenesCompra()) {
-            if (ordenCompra.getEstado() == estado) {
-                resultado.add(ordenCompra);
-            }
-        }
-
-        return resultado;
+        return ordenCompraController.consultarOrdenesCompraPorEstado(estado);
     }
 
     public ArrayList<OrdenCompra> consultarOrdenesCompraPorRubro(Rubro rubro) {
-        ArrayList<OrdenCompra> resultado = new ArrayList<>();
-
-        for (OrdenCompra ordenCompra : sistema.getOrdenesCompra()) {
-            for (LineaOrdenCompra linea : ordenCompra.getLineas()) {
-                if (linea.getItem().getRubro().getNombre().equals(rubro.getNombre())) {
-                    resultado.add(ordenCompra);
-                    break;
-                }
-            }
-        }
-
-        return resultado;
+        return ordenCompraController.consultarOrdenesCompraPorRubro(rubro);
     }
 
     public ArrayList<OrdenPago> consultarPagosPorProveedor(Proveedor proveedor) {
-        ArrayList<OrdenPago> resultado = new ArrayList<>();
-
-        for (OrdenPago ordenPago : sistema.getOrdenesPago()) {
-            if (ordenPago.getProveedor().getCuit() == proveedor.getCuit()) {
-                resultado.add(ordenPago);
-            }
-        }
-
-        return resultado;
+        return ordenPagoController.consultarPagosPorProveedor(proveedor);
     }
 
     public ArrayList<OrdenPago> consultarPagosPorPeriodo(Date desde, Date hasta) {
         ArrayList<OrdenPago> resultado = new ArrayList<>();
 
-        for (OrdenPago ordenPago : sistema.getOrdenesPago()) {
+        for (OrdenPago ordenPago : ordenPagoController.getOrdenesPago()) {
             if (fechaEntre(ordenPago.getFechaEmision(), desde, hasta)) {
                 resultado.add(ordenPago);
             }
@@ -103,7 +76,7 @@ public class ConsultasController {
     public ArrayList<OrdenPago> consultarPagosPorMedioPago(String medioBuscado) {
         ArrayList<OrdenPago> resultado = new ArrayList<>();
 
-        for (OrdenPago ordenPago : sistema.getOrdenesPago()) {
+        for (OrdenPago ordenPago : ordenPagoController.getOrdenesPago()) {
             for (MedioPago medioPago : ordenPago.getMediosPago()) {
                 if (medioPago.getDescripcion().toLowerCase().contains(medioBuscado.toLowerCase())) {
                     resultado.add(ordenPago);
@@ -118,7 +91,7 @@ public class ConsultasController {
     public double consultarTotalRetenidoPorImpuesto(TipoImpuesto tipoImpuesto) {
         double total = 0;
 
-        for (OrdenPago ordenPago : sistema.getOrdenesPago()) {
+        for (OrdenPago ordenPago : ordenPagoController.getOrdenesPago()) {
             for (Retencion retencion : ordenPago.getRetenciones()) {
                 if (retencion.getTipoImpuesto() == tipoImpuesto) {
                     total = total + retencion.getImporteRetenido();
@@ -132,7 +105,7 @@ public class ConsultasController {
     public double consultarTotalRetenidoPorImpuestoYPeriodo(TipoImpuesto tipoImpuesto, Date desde, Date hasta) {
         double total = 0;
 
-        for (OrdenPago ordenPago : sistema.getOrdenesPago()) {
+        for (OrdenPago ordenPago : ordenPagoController.getOrdenesPago()) {
             if (fechaEntre(ordenPago.getFechaEmision(), desde, hasta)) {
                 for (Retencion retencion : ordenPago.getRetenciones()) {
                     if (retencion.getTipoImpuesto() == tipoImpuesto) {
@@ -148,7 +121,7 @@ public class ConsultasController {
     public int consultarCantidadDocumentosPendientes() {
         int cantidad = 0;
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             if (documento.getEstado() == EstadoDocumentoComercial.PENDIENTE ||
                     documento.getEstado() == EstadoDocumentoComercial.PARCIALMENTE_CANCELADO) {
                 cantidad++;
@@ -161,7 +134,7 @@ public class ConsultasController {
     public int consultarTotalDocumentosPorDia(Date fecha) {
         int cantidad = 0;
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             if (mismaFecha(documento.getFechaEmision(), fecha)) {
                 cantidad++;
             }
@@ -173,7 +146,7 @@ public class ConsultasController {
     public int consultarTotalDocumentosPorPeriodo(Date desde, Date hasta) {
         int cantidad = 0;
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             if (fechaEntre(documento.getFechaEmision(), desde, hasta)) {
                 cantidad++;
             }
@@ -186,7 +159,7 @@ public class ConsultasController {
         ArrayList<DocumentoComercial> resultado = new ArrayList<>();
         Date hoy = new Date();
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             if (documento.getEstado() == EstadoDocumentoComercial.PENDIENTE ||
                     documento.getEstado() == EstadoDocumentoComercial.PARCIALMENTE_CANCELADO) {
 
@@ -209,7 +182,7 @@ public class ConsultasController {
 
         reporte = reporte + "Detalle de documentos del proveedor: " + proveedor.getRazonSocial() + "\n";
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             if (documento.getProveedor().getCuit() == proveedor.getCuit()) {
                 cantidad++;
                 total = total + documento.impactoEnCuentaCorriente();
@@ -235,7 +208,7 @@ public class ConsultasController {
 
         reporte = reporte + "Cuenta corriente de proveedor: " + proveedor.getRazonSocial() + "\n";
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             if (documento.getProveedor().getCuit() == proveedor.getCuit()) {
                 saldo = saldo + documento.impactoEnCuentaCorriente();
 
@@ -248,7 +221,7 @@ public class ConsultasController {
             }
         }
 
-        for (OrdenPago ordenPago : sistema.getOrdenesPago()) {
+        for (OrdenPago ordenPago : ordenPagoController.getOrdenesPago()) {
             if (ordenPago.getProveedor().getCuit() == proveedor.getCuit()) {
                 for (DetallePago detallePago : ordenPago.getDetallesPago()) {
                     saldo = saldo - detallePago.getMontoAplicado();
@@ -271,7 +244,7 @@ public class ConsultasController {
 
         reporte = reporte + "Deuda actual detallada del proveedor: " + proveedor.getRazonSocial() + "\n";
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             if (documento.getProveedor().getCuit() == proveedor.getCuit()) {
                 if (documento.getEstado() == EstadoDocumentoComercial.PENDIENTE ||
                         documento.getEstado() == EstadoDocumentoComercial.PARCIALMENTE_CANCELADO) {
@@ -298,7 +271,7 @@ public class ConsultasController {
 
         reporte = reporte + "Comparacion de precios para item: " + item.getDescripcion() + "\n";
 
-        for (OrdenCompra ordenCompra : sistema.getOrdenesCompra()) {
+        for (OrdenCompra ordenCompra : ordenCompraController.getOrdenesCompra()) {
             for (LineaOrdenCompra linea : ordenCompra.getLineas()) {
                 if (linea.getItem().getCodigo() == item.getCodigo()) {
                     reporte = reporte + "Proveedor: " + ordenCompra.getProveedor().getRazonSocial()
@@ -317,7 +290,7 @@ public class ConsultasController {
 
         reporte = reporte + "CUIT | Proveedor | Fecha | Tipo Documento | Nro | IVA | Total\n";
 
-        for (DocumentoComercial documento : sistema.getDocumentosComerciales()) {
+        for (DocumentoComercial documento : documentoController.getDocumentosComerciales()) {
             double ivaTotal = 0;
 
             for (LineaOrdenCompra linea : documento.getDetalleItems()) {
